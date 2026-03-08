@@ -541,6 +541,114 @@ y añadir el grupo docker.
 
 ---
 
+## HDD no aparece correctamente (disco formateado en Windows)
+
+Si conectas un disco duro que estaba formateado en Windows (NTFS o exFAT), puede ocurrir que:
+
+- OMV lo detecte pero no lo monte correctamente
+- Docker no vea el disco
+- Homepage no pueda mostrar su uso en widgets
+
+Esto ocurre porque el disco no está montado de forma persistente en Linux.
+
+### 1. Identificar el disco
+
+Listar discos:
+
+```bash
+lsblk
+```
+Ejemplo:
+```
+sda
+└─sda1
+```
+También se puede comprobar el UUID:
+```
+sudo blkid
+```
+
+### 2. Crear punto de montaje
+```
+sudo mkdir -p /mnt/disk1
+```
+
+### 3. Montar manualmente
+Ejemplo para NTFS:
+```
+sudo mount -t ntfs-3g /dev/sda1 /mnt/disk1
+```
+Ejemplo para exFAT:
+```
+sudo mount -t exfat /dev/sda1 /mnt/disk1
+```
+
+### 4. Montaje automático al arrancar
+Editar:
+```
+sudo nano /etc/fstab
+```
+Añadir una línea con el UUID del disco:
+```
+UUID=XXXXXXXX /mnt/disk1 ntfs-3g defaults,nofail 0 0
+```
+Para exFAT:
+```
+UUID=XXXXXXXX /mnt/disk1 exfat defaults,nofail 0 0
+```
+
+Ejemplo real:
+```bash
+proc            /proc           proc    defaults          0       0
+PARTUUID=5de99f39-01  /boot/firmware  vfat    defaults          0       2
+PARTUUID=5de99f39-02            /       ext4    noatime,nodiratime,defaults     0 1
+UUID=CA187C14187C01AD  /srv/dev-disk-by-uuid-CA187C14187C01AD  ntfs-3g  defaults,big_writes,nofail,x-systemd.device-timeout=10  0  0
+UUID=6a1529f2-6162-41cb-8b91-cf45542c71d4 /srv/dev-disk-by-uuid-6a1529f2-6162-41cb-8b91-cf45542c71d4 ext4 defaults,nofail,user_xattr,usrquota,grpquota,acl 0 0
+# >>> [openmediavault]
+/dev/disk/by-uuid/CA187C14187C01AD              /srv/dev-disk-by-uuid-CA187C14187C01AD  ntfs    defaults,nofail,big_writes      0 2
+/dev/disk/by-uuid/e98ac4e5-f471-4de3-b907-b6454d38a705          /srv/dev-disk-by-uuid-e98ac4e5-f471-4de3-b907-b6454d38a705      ext4    defaults,nofail,user_xattr,usrquota,grpquota,acl        0 2
+# <<< [openmediavault]
+```
+Guardar y probar:
+```
+sudo mount -a
+```
+
+### 5. Verificar
+```
+df -h
+```
+El disco debería aparecer montado.
+---
+### Nota
+
+En sistemas NAS basados en Linux (como OpenMediaVault) es recomendable usar sistemas de archivos nativos como:
+
+- ext4
+- btrfs
+
+pero NTFS y exFAT funcionan correctamente si se montan manualmente.
+
+---
+
+Cuando el disco está montado manualmente, **Docker puede no tener permisos**. En ese caso hay que hacer:
+
+```bash
+sudo chown -R 1000:1000 /mnt/disk1
+```
+Esto evita problemas con Plex, FileBrowser o rclone.
+
+
+
+
+
+
+
+
+
+
+
+
 # Resultado final
 
 Dashboard principal:
